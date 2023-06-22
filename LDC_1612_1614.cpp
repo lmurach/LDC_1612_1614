@@ -15,15 +15,20 @@ struct RpTable _Rp_lookup_table[] = {
 };
 
 LDC::LDC(uint8_t num_channels) {
-    _num_channels <- num_channels;
+    _num_channels = num_channels;
 }
 
-int8_t LDC::configure_channel(uint8_t channel, float Rp, float inductance, float capacitance) {
-    _Rp[channel] <- Rp; // in kohms
-    _inductance[channel] <- inductance; // in uH 
-    _capacitance[channel] <- capacitance; // in pF
-    _q_factor[channel] <- _Rp[channel] * (_capacitance[channel] / _inductance[channel]);
+// void LDC::print_num_channels() {
+//     Serial.println(_num_channels);
+//     Serial.println(_Rp[1]);
+// }
 
+int8_t LDC::configure_channel(uint8_t channel, float Rp, float inductance, float capacitance) {
+    //Serial.println(channel);
+    _Rp[channel] = Rp; // in kohms
+    _inductance[channel] = inductance; // in uH 
+    _capacitance[channel] = capacitance; // in pF
+    _q_factor[channel] = _Rp[channel] * (_capacitance[channel] / _inductance[channel]);
     if (_set_reference_divider(channel)) {
         return ERROR_FREQUENCY_TOO_LARGE;
     }
@@ -39,8 +44,80 @@ int8_t LDC::configure_channel(uint8_t channel, float Rp, float inductance, float
 
 // TODO: THIS ENTIRE FUNCTION
 // LIKELY NEED TO CHECK FOR ERRORS
-uint32_t LDC::get_channel_data(uint8_t channel) {
+// int32_t LDC::get_channel_data(uint8_t channel) {
+//     uint16_t MSB;
+//     uint16_t LSB;
+//     LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2, &MSB);
+//     LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2 + 1, &LSB);
+//     int8_t error = LDC::check_read_errors(MSB >> 11);
+//     if (error) {
+//         return error;
+//     }
+//     int32_t data = ((MSB & 0x0FFF) << 8) + LSB;
+//     if (data = 0xFFFFFFF) {
+//         return ERROR_COIL_NOT_DETECTED;
+//     }
+//     return data; 
+// }
+
+// int8_t LDC::check_read_errors(uint8_t error_byte) {
+//     if (error_byte & 0x8) {
+//         return ERROR_UNDER_RANGE;
+//     }
+//     else if (error_byte & 0x4) {
+//         return ERROR_OVER_RANGE;
+//     }
+//     else if (error_byte & 0x2) {
+//         return ERROR_WATCHDOG_TIMEOUT;
+//     }
+//     else if (error_byte & 0x1) {
+//         return ERROR_CONVERSION_AMPLITUDE;
+//     }
+//     return 0;
+// }
+
+int32_t LDC::parse_result_data(uint8_t channel, uint32_t raw_result, uint32_t* result) {
+    uint8_t value = 0;
+    *result = raw_result & 0x0fffffff;
+    if (0xfffffff == *result) {
+        Serial.println("can't detect coil Coil Inductance!!!");
+        *result = 0;
+        return -1;
+    }
+    value = raw_result >> 24;
+    if (value & 0x80) {
+        Serial.print("channel ");
+        Serial.print(channel);
+        Serial.println(": ERR_UR-Under range error!!!");
+    }
+    if (value & 0x40) {
+        Serial.print("channel ");
+        Serial.print(channel);
+        Serial.println(": ERR_OR-Over range error!!!");
+    }
+    if (value & 0x20) {
+        Serial.print("channel ");
+        Serial.print(channel);
+        Serial.println(": ERR_WD-Watch dog timeout error!!!");
+    }
+    if (value & 0x10) {
+        Serial.print("channel ");
+        Serial.print(channel);
+        Serial.println(": ERR_AE-error!!!");
+    }
     return 0;
+}
+
+uint32_t LDC::get_channel_result(uint8_t channel) {
+    uint32_t raw_value = 0;
+    uint16_t value = 0;
+    LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2), &value);
+    raw_value |= (uint32_t)value << 16;
+    LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2 + 1), &value);
+    raw_value |= (uint32_t)value;
+    return raw_value;
+    // parse_result_data(channel, raw_value, result);
+    // return 0;
 }
 
 // there are two dividers,  
@@ -49,18 +126,20 @@ uint32_t LDC::get_channel_data(uint8_t channel) {
 // otherwise it can be set to 2
 // then there are two 00 bits
 // then the rest is for the fRef divider
-// The design constraint for �REF0 is > 4 � �SENSOR
+// The design constraint for f_REF0 is > 4 * f_SENSOR
 // It can be set to 40MHz with a divider of 1, but this will make
 // the occilation time shorter and less accurate
+// a lower frequency also neautralizes any chance
+// for the inductor to self resonate and become a capacitor
+// through its parasitic capacitance
 bool LDC::_set_reference_divider(uint8_t channel) {
     uint8_t divider;
     uint16_t value;
     uint16_t FIN_DIV, FREF_DIV;
-
     // pull the ^-12 and ^6 for pF and uH out to the front
     // to change it to ^-6 and ^-3
     _f_sensor[channel] = 1 / (2 * 3.14 * sqrt(_inductance[channel] * _capacitance[channel]) * pow(10, -3) * pow(10, -6));
-    if (_f_sensor[channel] > 40000000) {
+    if (_f_sensor[channel] > EXTERNAL_FREQUENCY) {
         return ERROR_FREQUENCY_TOO_LARGE;
     }
     if (_f_sensor[channel] > 8750000) {
@@ -69,10 +148,15 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     else {
         value = 0x1000;
     }
-    divider = 40000000 / (_f_sensor[channel] * 4);
+    divider = EXTERNAL_FREQUENCY / (_f_sensor[channel] * 4);
     value |= divider;
-    _ref_frequency[channel] = 40000000 / divider;
+    _ref_frequency[channel] = EXTERNAL_FREQUENCY / divider; // the Grove board has an external occilator at 40MHz
     LDC::I2C_write_16bit(SET_FREQ_REG_START + channel, value);
+    Serial.println("Reference Divider");
+    Serial.println(value);
+    uint16_t test = 0;
+    LDC::I2C_read_16bit(SET_FREQ_REG_START + channel, &test);
+    Serial.println(test);
     return 0;
 }
 
@@ -80,12 +164,17 @@ bool LDC::_set_reference_divider(uint8_t channel) {
 // the datasheet recommends a minimum of 10
 // and adding a slight buffer to the calculation, here +4 was chosen
 void LDC::_set_stabilize_time(uint8_t channel) {
-    u16 value = 10;
-    u16 settleTime = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
+    uint16_t value = 10;
+    uint16_t settleTime = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
     if (settleTime > value) {
         value = settleTime;
     }
     LDC::I2C_write_16bit(SET_LC_STABILIZE_REG_START + channel, value);
+    Serial.println("Stabilize Time");
+    Serial.println(value);
+    uint16_t test = 0;
+    LDC::I2C_read_16bit(SET_LC_STABILIZE_REG_START + channel, &test);
+    Serial.println(test);
 }
 
 // conversion time is set to the highest value, 0xFFFF
@@ -94,6 +183,11 @@ void LDC::_set_stabilize_time(uint8_t channel) {
 // TODO: ADD A FAST MODE THAT CONVERTS AS FAST AS ALLOWED
 void LDC::_set_conversion_time(uint8_t channel) {
     LDC::I2C_write_16bit(SET_CONVERSION_TIME_REG_START + channel, 0xFFFF);
+    Serial.println("Conversion Time");
+    Serial.println(0xFFFF);
+    uint16_t test = 0;
+    LDC::I2C_read_16bit(SET_CONVERSION_TIME_REG_START + channel, &test);
+    Serial.println(test);
 }
 
 // The original library does not take into account the fact that the Rp
@@ -102,7 +196,7 @@ void LDC::_set_conversion_time(uint8_t channel) {
 // The table values are directly from the datasheet
 // the lowest possible should be taken
 bool LDC::_set_driver_current(uint8_t channel) {
-    uint8_t value;
+    uint16_t value;
     if (_Rp[channel] > _Rp_lookup_table[0].kohms) {
         return -1;
     }
@@ -112,6 +206,11 @@ bool LDC::_set_driver_current(uint8_t channel) {
         }
     }
     LDC::I2C_write_16bit(SET_DRIVER_CURRENT_REG + channel, value);
+    Serial.println("Driver Current");
+    Serial.println(value);
+    uint16_t test = 0;
+    LDC::I2C_read_16bit(SET_DRIVER_CURRENT_REG + channel, &test);
+    Serial.println(test);
     return 0;
 }
 
@@ -140,6 +239,12 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
         value |= 0b111;
     }
     LDC::I2C_write_16bit(MUL_CONFIG_REG, value);
+    Serial.println("MUX");
+    Serial.println(value);
+    uint16_t test = 0;
+    LDC::I2C_read_16bit(MUL_CONFIG_REG + channel, &test);
+    Serial.println(test);
+    return 0;
 }
 
 // all of this is the default but some critical changes need to made
@@ -147,7 +252,7 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
 // and testing for better accuracy
 // Need to look into:
 // Automatic Sensor Amplitude Correction Disable (bit 10)
-// Select Reference Frequency Source (bit 9)
+// Select Reference Frequency Source (bit 9) **TESTING DONE: USE EXTERNAL AT 40MHZ**
 // INTB Disable (bit 7)
 // High Current Sensor Drive (bit 6)
 void LDC::_LDC_config(uint8_t channel) {
@@ -167,6 +272,11 @@ void LDC::_LDC_config(uint8_t channel) {
     }
     value |= 0x1601;
     LDC::I2C_write_16bit(SENSOR_CONFIG_REG, value);
+    Serial.println("LDC Config");
+    Serial.println(value);
+    uint16_t test = 0;
+    LDC::I2C_read_16bit(SENSOR_CONFIG_REG + channel, &test);
+    Serial.println(test);
 }
 
 int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
@@ -179,7 +289,7 @@ int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
 }
 
 void LDC::I2C_read_16bit(uint8_t start_reg, uint16_t* value) {
-    u8 val = 0;
+    uint8_t val = 0;
     *value = 0;
     Wire.beginTransmission(_I2C_ADDR);
     Wire.write(start_reg);

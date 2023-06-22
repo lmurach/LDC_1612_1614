@@ -24,16 +24,22 @@
 #define CHANNEL_2  2  // LDC1614 only
 #define CHANNEL_3  3  // LDC1614 only
 
+#define EXTERNAL_FREQUENCY 40000000
 #define RP_TABLE_ELEMENTS  31
 #define _I2C_ADDR          0x2B
 
-#define ERROR_FREQUENCY_TOO_LARGE  -1  // increase the cap size in parallel with the inductor
-#define ERROR_RP_TOO_LARGE         -2  // add a 100 ohm resistor in parallel with the inductor
+#define ERROR_FREQUENCY_TOO_LARGE   -1  // increase the cap size in parallel with the inductor
+#define ERROR_RP_TOO_LARGE          -2  // add a 100 ohm resistor in parallel with the inductor
+#define ERROR_UNDER_RANGE           -3
+#define ERROR_OVER_RANGE            -4
+#define ERROR_WATCHDOG_TIMEOUT      -5
+#define ERROR_CONVERSION_AMPLITUDE  -6
+#define ERROR_COIL_NOT_DETECTED     -7
 
 struct RpTable {
   float kohms;
   uint16_t current;
-}; 
+};  
 
 class LDC {
 private:
@@ -52,13 +58,16 @@ private:
     void _MUX_and_deglitch_config(uint8_t);
     void _LDC_config(uint8_t);
 
+    int32_t parse_result_data(uint8_t, uint32_t, uint32_t*);
+
     int32_t I2C_write_16bit(uint8_t, uint16_t);
     void I2C_read_16bit(uint8_t, uint16_t*);
   
 public:
     LDC(uint8_t);
     int8_t configure_channel(uint8_t, float, float, float);
-    uint32_t get_channel_data(uint8_t);
+    uint32_t get_channel_result(uint8_t);
+    void print_num_channels();
 };
 
 #endif
