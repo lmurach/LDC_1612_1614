@@ -1,5 +1,5 @@
-#ifndef TEST_LIB.H
-#define TEST_LIB.H
+#ifndef LDC_1612_1614.H
+#define LDC_1612_1614.H
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -24,7 +24,8 @@
 #define CHANNEL_2  2  // LDC1614 only
 #define CHANNEL_3  3  // LDC1614 only
 
-#define RP_TABLE_ELEMENTS 31
+#define RP_TABLE_ELEMENTS  31
+#define _I2C_ADDR          0x2B
 
 #define ERROR_FREQUENCY_TOO_LARGE  -1  // increase the cap size in parallel with the inductor
 #define ERROR_RP_TOO_LARGE         -2  // add a 100 ohm resistor in parallel with the inductor

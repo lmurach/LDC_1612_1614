@@ -1,6 +1,6 @@
-#include "test_lib.h"
+#include "LDC_1612_1614.h"
 
-struct RpTable Rp_lookup_table[RP_TABLE_ELEMENTS] = {
+struct RpTable _Rp_lookup_table[] = {
     {90.0, 16}, {77.6, 18}, {66.9, 20},
     {57.6, 23}, {49.7, 28}, {42.8, 32},
     {36.9, 40}, {31.8, 46}, {27.4, 52},
@@ -37,6 +37,11 @@ int8_t LDC::configure_channel(uint8_t channel, float Rp, float inductance, float
     return 0;
 }
 
+// TODO: THIS ENTIRE FUNCTION
+// LIKELY NEED TO CHECK FOR ERRORS
+uint32_t LDC::get_channel_data(uint8_t channel) {
+    return 0;
+}
 
 // there are two dividers,  
 // FIN_DIVIDERX and FREF_DIVIDERX, where X is the channel
@@ -44,7 +49,7 @@ int8_t LDC::configure_channel(uint8_t channel, float Rp, float inductance, float
 // otherwise it can be set to 2
 // then there are two 00 bits
 // then the rest is for the fRef divider
-// The design constraint for ƒREF0 is > 4 × ƒSENSOR
+// The design constraint for ï¿½REF0 is > 4 ï¿½ ï¿½SENSOR
 // It can be set to 40MHz with a divider of 1, but this will make
 // the occilation time shorter and less accurate
 bool LDC::_set_reference_divider(uint8_t channel) {
@@ -76,7 +81,7 @@ bool LDC::_set_reference_divider(uint8_t channel) {
 // and adding a slight buffer to the calculation, here +4 was chosen
 void LDC::_set_stabilize_time(uint8_t channel) {
     u16 value = 10;
-    u16 settleTime = ((q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
+    u16 settleTime = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
     if (settleTime > value) {
         value = settleTime;
     }
@@ -98,11 +103,11 @@ void LDC::_set_conversion_time(uint8_t channel) {
 // the lowest possible should be taken
 bool LDC::_set_driver_current(uint8_t channel) {
     uint8_t value;
-    if (Rp[channel] > Rp_lookup_table[0].kohms) {
+    if (_Rp[channel] > _Rp_lookup_table[0].kohms) {
         return -1;
     }
     for (int i = 0; i < RP_TABLE_ELEMENTS; i++) {
-        if (resistance[channel] <= Rp_lookup_table[i].kohms) {
+        if (_Rp[channel] <= _Rp_lookup_table[i].kohms) {
             value = i;
         }
     }
@@ -122,13 +127,13 @@ bool LDC::_set_driver_current(uint8_t channel) {
 void LDC::_MUX_and_deglitch_config(uint8_t channel) {
     uint16_t value = 0x8208;  
     // TODO: ADD SUPPORT FOR LDC1614 WITH TURNING ON MORE CHANNELS
-    if (F_Sensor < 1000000) {
+    if (_f_sensor < 1000000) {
         value |= 0b001;
     }
-    else if (F_Sensor < 3300000) {
+    else if (_f_sensor < 3300000) {
         value |= 0b100;
     }
-    else if (F_Sensor < 10000000) {
+    else if (_f_sensor < 10000000) {
         value |= 0b101;
     }
     else {
@@ -137,27 +142,35 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
     LDC::I2C_write_16bit(MUL_CONFIG_REG, value);
 }
 
+// all of this is the default but some critical changes need to made
+// this is the part of the library that needs the most tweaking
+// and testing for better accuracy
+// Need to look into:
+// Automatic Sensor Amplitude Correction Disable (bit 10)
+// Select Reference Frequency Source (bit 9)
+// INTB Disable (bit 7)
+// High Current Sensor Drive (bit 6)
 void LDC::_LDC_config(uint8_t channel) {
     uint16_t value;
     switch (channel) {
     case CHANNEL_0: 
-        *value = 0x0000;
+        value = 0x0000;
     case CHANNEL_1: 
-        *value = 0x7000;
+        value = 0x7000;
         break;
     case CHANNEL_2: 
-        *value = 0x8000;
+        value = 0x8000;
         break;
     case CHANNEL_3: 
-        *value = 0xc000;
+        value = 0xc000;
         break;
     }
-    value |= 0x1401;
+    value |= 0x1601;
     LDC::I2C_write_16bit(SENSOR_CONFIG_REG, value);
 }
 
 int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
-    Wire.beginTransmission(_IIC_ADDR);
+    Wire.beginTransmission(_I2C_ADDR);
     Wire.write(reg);
 
     Wire.write((uint8_t)(value >> 8));
@@ -168,11 +181,11 @@ int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
 void LDC::I2C_read_16bit(uint8_t start_reg, uint16_t* value) {
     u8 val = 0;
     *value = 0;
-    Wire.beginTransmission(_IIC_ADDR);
+    Wire.beginTransmission(_I2C_ADDR);
     Wire.write(start_reg);
     Wire.endTransmission(false);
 
-    Wire.requestFrom(_IIC_ADDR, sizeof(uint16_t));
+    Wire.requestFrom(_I2C_ADDR, sizeof(uint16_t));
     while (sizeof(uint16_t) != Wire.available());
     val = Wire.read();
     *value |= (uint16_t)val << 8;
