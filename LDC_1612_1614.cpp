@@ -153,10 +153,10 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     _ref_frequency[channel] = EXTERNAL_FREQUENCY / divider; // the Grove board has an external occilator at 40MHz
     LDC::I2C_write_16bit(SET_FREQ_REG_START + channel, value);
     Serial.println("Reference Divider");
-    Serial.println(value);
+    Serial.println(value, HEX);
     uint16_t test = 0;
     LDC::I2C_read_16bit(SET_FREQ_REG_START + channel, &test);
-    Serial.println(test);
+    Serial.println(test, HEX);
     return 0;
 }
 
@@ -171,10 +171,10 @@ void LDC::_set_stabilize_time(uint8_t channel) {
     }
     LDC::I2C_write_16bit(SET_LC_STABILIZE_REG_START + channel, value);
     Serial.println("Stabilize Time");
-    Serial.println(value);
+    Serial.println(value, HEX);
     uint16_t test = 0;
     LDC::I2C_read_16bit(SET_LC_STABILIZE_REG_START + channel, &test);
-    Serial.println(test);
+    Serial.println(test, HEX);
 }
 
 // conversion time is set to the highest value, 0xFFFF
@@ -184,10 +184,10 @@ void LDC::_set_stabilize_time(uint8_t channel) {
 void LDC::_set_conversion_time(uint8_t channel) {
     LDC::I2C_write_16bit(SET_CONVERSION_TIME_REG_START + channel, 0xFFFF);
     Serial.println("Conversion Time");
-    Serial.println(0xFFFF);
+    Serial.println(0xFFFF, HEX);
     uint16_t test = 0;
     LDC::I2C_read_16bit(SET_CONVERSION_TIME_REG_START + channel, &test);
-    Serial.println(test);
+    Serial.println(test, HEX);
 }
 
 // The original library does not take into account the fact that the Rp
@@ -195,6 +195,8 @@ void LDC::_set_conversion_time(uint8_t channel) {
 // up the correct current value using that Rp value
 // The table values are directly from the datasheet
 // the lowest possible should be taken
+// the value must be set in bits 15-11
+// the rest are reserved to be 0
 bool LDC::_set_driver_current(uint8_t channel) {
     uint16_t value;
     if (_Rp[channel] > _Rp_lookup_table[0].kohms) {
@@ -205,12 +207,13 @@ bool LDC::_set_driver_current(uint8_t channel) {
             value = i;
         }
     }
+    value = value << 11;
     LDC::I2C_write_16bit(SET_DRIVER_CURRENT_REG + channel, value);
     Serial.println("Driver Current");
-    Serial.println(value);
+    Serial.println(value, HEX);
     uint16_t test = 0;
     LDC::I2C_read_16bit(SET_DRIVER_CURRENT_REG + channel, &test);
-    Serial.println(test);
+    Serial.println(test, HEX);
     return 0;
 }
 
@@ -240,10 +243,10 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
     }
     LDC::I2C_write_16bit(MUL_CONFIG_REG, value);
     Serial.println("MUX");
-    Serial.println(value);
+    Serial.println(value, HEX);
     uint16_t test = 0;
-    LDC::I2C_read_16bit(MUL_CONFIG_REG + channel, &test);
-    Serial.println(test);
+    LDC::I2C_read_16bit(MUL_CONFIG_REG, &test);
+    Serial.println(test, HEX);
     return 0;
 }
 
@@ -255,6 +258,7 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
 // Select Reference Frequency Source (bit 9) **TESTING DONE: USE EXTERNAL AT 40MHZ**
 // INTB Disable (bit 7)
 // High Current Sensor Drive (bit 6)
+// Note: only one config, not per channel
 void LDC::_LDC_config(uint8_t channel) {
     uint16_t value;
     switch (channel) {
@@ -273,10 +277,10 @@ void LDC::_LDC_config(uint8_t channel) {
     value |= 0x1601;
     LDC::I2C_write_16bit(SENSOR_CONFIG_REG, value);
     Serial.println("LDC Config");
-    Serial.println(value);
+    Serial.println(value, HEX);
     uint16_t test = 0;
-    LDC::I2C_read_16bit(SENSOR_CONFIG_REG + channel, &test);
-    Serial.println(test);
+    LDC::I2C_read_16bit(SENSOR_CONFIG_REG, &test);
+    Serial.println(test, HEX);
 }
 
 int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
