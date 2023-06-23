@@ -58,15 +58,15 @@ private:
     void _MUX_and_deglitch_config(uint8_t);
     void _LDC_config(uint8_t);
 
-    int32_t parse_result_data(uint8_t, uint32_t, uint32_t*);
+    int8_t check_read_errors(uint8_t);
 
     int32_t I2C_write_16bit(uint8_t, uint16_t);
-    void I2C_read_16bit(uint8_t, uint16_t*);
+    uint16_t I2C_read_16bit(uint8_t);
   
 public:
     LDC(uint8_t);
     int8_t configure_channel(uint8_t, float, float, float);
-    uint32_t get_channel_result(uint8_t);
+    uint32_t get_channel_data(uint8_t);
     void print_num_channels();
 };
 

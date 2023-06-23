@@ -42,68 +42,33 @@ int8_t LDC::configure_channel(uint8_t channel, float Rp, float inductance, float
     return 0;
 }
 
-// TODO: THIS ENTIRE FUNCTION
-// LIKELY NEED TO CHECK FOR ERRORS
-// int32_t LDC::get_channel_data(uint8_t channel) {
-//     uint16_t MSB;
-//     uint16_t LSB;
-//     LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2, &MSB);
-//     LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2 + 1, &LSB);
-//     int8_t error = LDC::check_read_errors(MSB >> 11);
-//     if (error) {
-//         return error;
-//     }
-//     int32_t data = ((MSB & 0x0FFF) << 8) + LSB;
-//     if (data = 0xFFFFFFF) {
-//         return ERROR_COIL_NOT_DETECTED;
-//     }
-//     return data; 
-// }
+// TODO: NEED TO CHECK FOR ERRORS
+uint32_t LDC::get_channel_data(uint8_t channel) {
+    uint32_t MSB = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2);
+    uint32_t LSB = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2 + 1);
+    // int8_t error = LDC::check_read_errors(MSB >> 11);
+    // if (error) {
+    //     return error;
+    // }
+    uint32_t data = ((MSB & 0x0FFF) << 16) | LSB;
+    if (0xFFFFFFF == data) {
+        return ERROR_COIL_NOT_DETECTED;
+    }
+    return data; 
+}
 
-// int8_t LDC::check_read_errors(uint8_t error_byte) {
-//     if (error_byte & 0x8) {
-//         return ERROR_UNDER_RANGE;
-//     }
-//     else if (error_byte & 0x4) {
-//         return ERROR_OVER_RANGE;
-//     }
-//     else if (error_byte & 0x2) {
-//         return ERROR_WATCHDOG_TIMEOUT;
-//     }
-//     else if (error_byte & 0x1) {
-//         return ERROR_CONVERSION_AMPLITUDE;
-//     }
-//     return 0;
-// }
-
-int32_t LDC::parse_result_data(uint8_t channel, uint32_t raw_result, uint32_t* result) {
-    uint8_t value = 0;
-    *result = raw_result & 0x0fffffff;
-    if (0xfffffff == *result) {
-        Serial.println("can't detect coil Coil Inductance!!!");
-        *result = 0;
-        return -1;
+int8_t LDC::check_read_errors(uint8_t error_byte) {
+    if (error_byte & 0x8) {
+        return ERROR_UNDER_RANGE;
     }
-    value = raw_result >> 24;
-    if (value & 0x80) {
-        Serial.print("channel ");
-        Serial.print(channel);
-        Serial.println(": ERR_UR-Under range error!!!");
+    else if (error_byte & 0x4) {
+        return ERROR_OVER_RANGE;
     }
-    if (value & 0x40) {
-        Serial.print("channel ");
-        Serial.print(channel);
-        Serial.println(": ERR_OR-Over range error!!!");
+    else if (error_byte & 0x2) {
+        return ERROR_WATCHDOG_TIMEOUT;
     }
-    if (value & 0x20) {
-        Serial.print("channel ");
-        Serial.print(channel);
-        Serial.println(": ERR_WD-Watch dog timeout error!!!");
-    }
-    if (value & 0x10) {
-        Serial.print("channel ");
-        Serial.print(channel);
-        Serial.println(": ERR_AE-error!!!");
+    else if (error_byte & 0x1) {
+        return ERROR_CONVERSION_AMPLITUDE;
     }
     return 0;
 }
@@ -111,9 +76,9 @@ int32_t LDC::parse_result_data(uint8_t channel, uint32_t raw_result, uint32_t* r
 uint32_t LDC::get_channel_result(uint8_t channel) {
     uint32_t raw_value = 0;
     uint16_t value = 0;
-    LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2), &value);
+    value = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2));
     raw_value |= (uint32_t)value << 16;
-    LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2 + 1), &value);
+    value = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2 + 1));
     raw_value |= (uint32_t)value;
     return raw_value;
     // parse_result_data(channel, raw_value, result);
@@ -154,8 +119,7 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     LDC::I2C_write_16bit(SET_FREQ_REG_START + channel, value);
     Serial.println("Reference Divider");
     Serial.println(value, HEX);
-    uint16_t test = 0;
-    LDC::I2C_read_16bit(SET_FREQ_REG_START + channel, &test);
+    uint16_t test = LDC::I2C_read_16bit(SET_FREQ_REG_START + channel);
     Serial.println(test, HEX);
     return 0;
 }
@@ -172,8 +136,7 @@ void LDC::_set_stabilize_time(uint8_t channel) {
     LDC::I2C_write_16bit(SET_LC_STABILIZE_REG_START + channel, value);
     Serial.println("Stabilize Time");
     Serial.println(value, HEX);
-    uint16_t test = 0;
-    LDC::I2C_read_16bit(SET_LC_STABILIZE_REG_START + channel, &test);
+    uint16_t test = LDC::I2C_read_16bit(SET_LC_STABILIZE_REG_START + channel);
     Serial.println(test, HEX);
 }
 
@@ -185,8 +148,7 @@ void LDC::_set_conversion_time(uint8_t channel) {
     LDC::I2C_write_16bit(SET_CONVERSION_TIME_REG_START + channel, 0xFFFF);
     Serial.println("Conversion Time");
     Serial.println(0xFFFF, HEX);
-    uint16_t test = 0;
-    LDC::I2C_read_16bit(SET_CONVERSION_TIME_REG_START + channel, &test);
+    uint16_t test = LDC::I2C_read_16bit(SET_CONVERSION_TIME_REG_START + channel);
     Serial.println(test, HEX);
 }
 
@@ -211,8 +173,7 @@ bool LDC::_set_driver_current(uint8_t channel) {
     LDC::I2C_write_16bit(SET_DRIVER_CURRENT_REG + channel, value);
     Serial.println("Driver Current");
     Serial.println(value, HEX);
-    uint16_t test = 0;
-    LDC::I2C_read_16bit(SET_DRIVER_CURRENT_REG + channel, &test);
+    uint16_t test = LDC::I2C_read_16bit(SET_DRIVER_CURRENT_REG + channel);
     Serial.println(test, HEX);
     return 0;
 }
@@ -227,7 +188,7 @@ bool LDC::_set_driver_current(uint8_t channel) {
 // the lowest possible of the 4 provided options should
 // be selected for cleaner results
 void LDC::_MUX_and_deglitch_config(uint8_t channel) {
-    uint16_t value = 0x8208;  
+    uint16_t value = 0x0208;  
     // TODO: ADD SUPPORT FOR LDC1614 WITH TURNING ON MORE CHANNELS
     if (_f_sensor < 1000000) {
         value |= 0b001;
@@ -244,8 +205,7 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
     LDC::I2C_write_16bit(MUL_CONFIG_REG, value);
     Serial.println("MUX");
     Serial.println(value, HEX);
-    uint16_t test = 0;
-    LDC::I2C_read_16bit(MUL_CONFIG_REG, &test);
+    uint16_t test = LDC::I2C_read_16bit(MUL_CONFIG_REG);
     Serial.println(test, HEX);
     return 0;
 }
@@ -278,8 +238,7 @@ void LDC::_LDC_config(uint8_t channel) {
     LDC::I2C_write_16bit(SENSOR_CONFIG_REG, value);
     Serial.println("LDC Config");
     Serial.println(value, HEX);
-    uint16_t test = 0;
-    LDC::I2C_read_16bit(SENSOR_CONFIG_REG, &test);
+    uint16_t test = LDC::I2C_read_16bit(SENSOR_CONFIG_REG);
     Serial.println(test, HEX);
 }
 
@@ -292,17 +251,18 @@ int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
     return Wire.endTransmission();
 }
 
-void LDC::I2C_read_16bit(uint8_t start_reg, uint16_t* value) {
-    uint8_t val = 0;
-    *value = 0;
+uint16_t LDC::I2C_read_16bit(uint8_t start_reg) {
+    uint16_t result = 0;
+    uint8_t byte = 0;
     Wire.beginTransmission(_I2C_ADDR);
     Wire.write(start_reg);
     Wire.endTransmission(false);
 
     Wire.requestFrom(_I2C_ADDR, sizeof(uint16_t));
     while (sizeof(uint16_t) != Wire.available());
-    val = Wire.read();
-    *value |= (uint16_t)val << 8;
-    val = Wire.read();
-    *value |= val;
+    byte = Wire.read();
+    result = (uint16_t)byte << 8;
+    byte = Wire.read();
+    result |= byte;
+    return result;
 }
