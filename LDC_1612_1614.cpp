@@ -73,17 +73,17 @@ int8_t LDC::check_read_errors(uint8_t error_byte) {
     return 0;
 }
 
-uint32_t LDC::get_channel_result(uint8_t channel) {
-    uint32_t raw_value = 0;
-    uint16_t value = 0;
-    value = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2));
-    raw_value |= (uint32_t)value << 16;
-    value = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2 + 1));
-    raw_value |= (uint32_t)value;
-    return raw_value;
-    // parse_result_data(channel, raw_value, result);
-    // return 0;
-}
+// uint32_t LDC::get_channel_result(uint8_t channel) {
+//     uint32_t raw_value = 0;
+//     uint16_t value = 0;
+//     value = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2));
+//     raw_value |= (uint32_t)value << 16;
+//     value = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + (channel * 2 + 1));
+//     raw_value |= (uint32_t)value;
+//     return raw_value;
+//     // parse_result_data(channel, raw_value, result);
+//     // return 0;
+// }
 
 // there are two dividers,  
 // FIN_DIVIDERX and FREF_DIVIDERX, where X is the channel
@@ -225,7 +225,7 @@ void LDC::_LDC_config(uint8_t channel) {
     case CHANNEL_0: 
         value = 0x0000;
     case CHANNEL_1: 
-        value = 0x7000;
+        value = 0x4000;
         break;
     case CHANNEL_2: 
         value = 0x8000;
