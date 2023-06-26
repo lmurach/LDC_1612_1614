@@ -16,6 +16,7 @@ struct RpTable _Rp_lookup_table[] = {
 
 LDC::LDC(uint8_t num_channels) {
     _num_channels = num_channels;
+    _channels_in_use = 0;
 }
 
 // void LDC::print_num_channels() {
@@ -23,22 +24,31 @@ LDC::LDC(uint8_t num_channels) {
 //     Serial.println(_Rp[1]);
 // }
 
-int8_t LDC::configure_channel(uint8_t channel, float Rp, float inductance, float capacitance) {
+int8_t LDC::configure_channel(uint8_t channel, float inductance, float capacitance, float Rp) {
     //Serial.println(channel);
-    _Rp[channel] = Rp; // in kohms
     _inductance[channel] = inductance; // in uH 
     _capacitance[channel] = capacitance; // in pF
+    _Rp[channel] = Rp; // in kohms
     _q_factor[channel] = _Rp[channel] * (_capacitance[channel] / _inductance[channel]);
+    _set_channel_in_use(channel);
     if (_set_reference_divider(channel)) {
         return ERROR_FREQUENCY_TOO_LARGE;
     }
-    _set_stabilize_time(channel);
+    _set_settle_count(channel);
     _set_conversion_time(channel);
     if (_set_driver_current(channel)) {
         return ERROR_RP_TOO_LARGE;
     }
     _MUX_and_deglitch_config(channel);
     _LDC_config(channel);
+    return 0;
+}
+
+bool LDC::_set_channel_in_use(uint8_t channel) {
+    if (channel > _num_channels) {
+        return ERROR_CHANNEL_NOT_SUPPORTED;
+    }
+    _channels_in_use |= (1 << channel);
     return 0;
 }
 
@@ -57,7 +67,7 @@ uint32_t LDC::get_channel_data(uint8_t channel) {
     return data; 
 }
 
-int8_t LDC::check_read_errors(uint8_t error_byte) {
+int8_t LDC::_check_read_errors(uint8_t error_byte) {
     if (error_byte & 0x8) {
         return ERROR_UNDER_RANGE;
     }
@@ -104,7 +114,7 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     // pull the ^-12 and ^6 for pF and uH out to the front
     // to change it to ^-6 and ^-3
     _f_sensor[channel] = 1 / (2 * 3.14 * sqrt(_inductance[channel] * _capacitance[channel]) * pow(10, -3) * pow(10, -6));
-    if (_f_sensor[channel] > EXTERNAL_FREQUENCY) {
+    if (_f_sensor[channel] > 33000000) {
         return ERROR_FREQUENCY_TOO_LARGE;
     }
     if (_f_sensor[channel] > 8750000) {
@@ -125,9 +135,10 @@ bool LDC::_set_reference_divider(uint8_t channel) {
 }
 
 // stabilize time is Q * reference frequency / (16 * sensor frequency)
+// Settle Time (tS1)= (SETTLECOUNT1ˣ16) / ƒREF1
 // the datasheet recommends a minimum of 10
 // and adding a slight buffer to the calculation, here +4 was chosen
-void LDC::_set_stabilize_time(uint8_t channel) {
+void LDC::_set_settle_count(uint8_t channel) {
     uint16_t value = 10;
     uint16_t settleTime = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
     if (settleTime > value) {
@@ -188,8 +199,19 @@ bool LDC::_set_driver_current(uint8_t channel) {
 // the lowest possible of the 4 provided options should
 // be selected for cleaner results
 void LDC::_MUX_and_deglitch_config(uint8_t channel) {
-    uint16_t value = 0x0208;  
-    // TODO: ADD SUPPORT FOR LDC1614 WITH TURNING ON MORE CHANNELS
+    uint16_t value = 0x0208;
+    // handling channel scanning
+    if (_channels_in_use & (_channels_in_use - 1) != 0) {
+        // if more than one bit is set in the byte 
+        value |= 0x8000;
+    }
+    else if (_channels_in_use & 0b1000) {
+        value |= 0x2000; // channel 2 in use
+    }
+    else if (_channels_in_use & 0b0100) {
+        value |= 0x4000; // channel 3 in use
+    }
+    // handling input deglitch
     if (_f_sensor < 1000000) {
         value |= 0b001;
     }
