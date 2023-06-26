@@ -32,12 +32,14 @@ int8_t LDC::configure_channel(uint8_t channel, float inductance, float capacitan
     _q_factor[channel] = _Rp[channel] * (_capacitance[channel] / _inductance[channel]);
     _set_channel_in_use(channel);
     if (_set_reference_divider(channel)) {
-        return ERROR_FREQUENCY_TOO_LARGE;
+        Serial.println(ERROR_FREQUENCY_TOO_LARGE);
+        return -1;
     }
     _set_settle_count(channel);
     _set_conversion_time(channel);
     if (_set_driver_current(channel)) {
-        return ERROR_RP_TOO_LARGE;
+        Serial.println(ERROR_RP_TOO_LARGE);
+        return -1;
     }
     _MUX_and_deglitch_config(channel);
     _LDC_config(channel);
@@ -46,7 +48,8 @@ int8_t LDC::configure_channel(uint8_t channel, float inductance, float capacitan
 
 bool LDC::_set_channel_in_use(uint8_t channel) {
     if (channel > _num_channels) {
-        return ERROR_CHANNEL_NOT_SUPPORTED;
+        Serial.println(ERROR_CHANNEL_NOT_SUPPORTED);
+        return -1;
     }
     _channels_in_use |= (1 << channel);
     return 0;
@@ -62,26 +65,26 @@ uint32_t LDC::get_channel_data(uint8_t channel) {
     // }
     uint32_t data = ((MSB & 0x0FFF) << 16) | LSB;
     if (0xFFFFFFF == data) {
-        return ERROR_COIL_NOT_DETECTED;
+        Serial.println(ERROR_COIL_NOT_DETECTED);
     }
     return data; 
 }
 
-int8_t LDC::_check_read_errors(uint8_t error_byte) {
-    if (error_byte & 0x8) {
-        return ERROR_UNDER_RANGE;
-    }
-    else if (error_byte & 0x4) {
-        return ERROR_OVER_RANGE;
-    }
-    else if (error_byte & 0x2) {
-        return ERROR_WATCHDOG_TIMEOUT;
-    }
-    else if (error_byte & 0x1) {
-        return ERROR_CONVERSION_AMPLITUDE;
-    }
-    return 0;
-}
+// int8_t LDC::_check_read_errors(uint8_t error_byte) {
+//     if (error_byte & 0x8) {
+//         return ERROR_UNDER_RANGE;
+//     }
+//     else if (error_byte & 0x4) {
+//         return ERROR_OVER_RANGE;
+//     }
+//     else if (error_byte & 0x2) {
+//         return ERROR_WATCHDOG_TIMEOUT;
+//     }
+//     else if (error_byte & 0x1) {
+//         return ERROR_CONVERSION_AMPLITUDE;
+//     }
+//     return 0;
+// }
 
 // uint32_t LDC::get_channel_result(uint8_t channel) {
 //     uint32_t raw_value = 0;
@@ -115,7 +118,8 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     // to change it to ^-6 and ^-3
     _f_sensor[channel] = 1 / (2 * 3.14 * sqrt(_inductance[channel] * _capacitance[channel]) * pow(10, -3) * pow(10, -6));
     if (_f_sensor[channel] > 33000000) {
-        return ERROR_FREQUENCY_TOO_LARGE;
+        Serial.println(ERROR_FREQUENCY_TOO_LARGE);
+        return -1;
     }
     if (_f_sensor[channel] > 8750000) {
         value = 0x2000;

@@ -31,14 +31,23 @@
 #define RP_TABLE_ELEMENTS  31
 #define _I2C_ADDR          0x2B
 
-#define ERROR_FREQUENCY_TOO_LARGE    -1  // increase the cap size in parallel with the inductor
-#define ERROR_RP_TOO_LARGE           -2  // add a 100 ohm resistor in parallel with the inductor
-#define ERROR_UNDER_RANGE            -3
-#define ERROR_CHANNEL_NOT_SUPPORTED  -8
-#define ERROR_OVER_RANGE             -4
-#define ERROR_WATCHDOG_TIMEOUT       -5
-#define ERROR_CONVERSION_AMPLITUDE   -6
-#define ERROR_COIL_NOT_DETECTED      -7
+#define ERROR_FREQUENCY_TOO_LARGE \
+"ERROR: Sensor frequency is too large! \n  \
+Try to increase the size of the parallel capacitor."
+#define ERROR_RP_TOO_LARGE \
+"ERROR: Rp is too large! \n \
+Try to add a 100 ohm resistor in parallel with the inductor."
+#define ERROR_CHANNEL_NOT_SUPPORTED \
+"ERROR: This chip does not support the channel specified. \n \
+Either you mistyped the channel number or the chip number."
+// #define ERROR_UNDER_RANGE
+// "ERROR: "
+// #define ERROR_OVER_RANGE             -4
+// #define ERROR_WATCHDOG_TIMEOUT       -5
+// #define ERROR_CONVERSION_AMPLITUDE   -6
+#define ERROR_COIL_NOT_DETECTED \ 
+"ERROR: The coil is not detected. \n \
+Try checking all connections."
 
 struct RpTable {
   float kohms;
