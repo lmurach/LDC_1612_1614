@@ -125,7 +125,7 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     // pull the ^-12 and ^6 for pF and uH out to the front
     // to change it to ^-6 and ^-3
     _f_sensor[channel] = 1 / (2 * 3.14 * sqrt(_inductance[channel] * _capacitance[channel]) * pow(10, -3) * pow(10, -6));
-    if (_f_sensor[channel] > 33000000) {
+    if (_f_sensor[channel] > MAX_SENSING_FREQ) {
         return -1;
     }
     if (_f_sensor[channel] > 8750000) {
