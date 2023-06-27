@@ -29,12 +29,16 @@
 
 #define EXTERNAL_FREQUENCY 40000000
 #define MAX_SENSING_FREQ   10000000
+#define MIN_SENSING_FREQ   1000
 #define RP_TABLE_ELEMENTS  31
 #define _I2C_ADDR          0x2B
 
 #define ERROR_FREQUENCY_TOO_LARGE \
 "ERROR: Sensor frequency is too large! \n  \
 Try to increase the size of the parallel capacitor."
+#define ERROR_FREQUENCY_TOO_SMALL \
+"ERROR: Sensor frequency is too small! \n \
+Try to decrease the size of the parallel capacitor."
 #define ERROR_RP_TOO_LARGE \
 "ERROR: Rp is too large! \n \
 Try to add a 100 ohm resistor in parallel with the inductor."

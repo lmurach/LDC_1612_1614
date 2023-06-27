@@ -35,7 +35,6 @@ int8_t LDC::configure_channel(uint8_t channel, float inductance, float capacitan
         return -1;
     }
     if (_set_reference_divider(channel)) {
-        Serial.println(ERROR_FREQUENCY_TOO_LARGE);
         return -1;
     }
     if (_set_settle_count(channel)) {
@@ -126,6 +125,11 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     // to change it to ^-6 and ^-3
     _f_sensor[channel] = 1 / (2 * 3.14 * sqrt(_inductance[channel] * _capacitance[channel]) * pow(10, -3) * pow(10, -6));
     if (_f_sensor[channel] > MAX_SENSING_FREQ) {
+        Serial.println(ERROR_FREQUENCY_TOO_LARGE);
+        return -1;
+    }
+    if (_f_sensor[channel] < MIN_SENSING_FREQ) {
+        Serial.println(ERROR_FREQUENCY_TOO_SMALL);
         return -1;
     }
     if (_f_sensor[channel] > 8750000) {
