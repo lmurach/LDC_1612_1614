@@ -37,6 +37,10 @@ Try to increase the size of the parallel capacitor."
 #define ERROR_RP_TOO_LARGE \
 "ERROR: Rp is too large! \n \
 Try to add a 100 ohm resistor in parallel with the inductor."
+#define ERROR_SETTLE_TOO_LARGE \
+"ERROR Q is too large compared to the size of the coil. \n \
+Try to reduce the size of the capacitor, \n \
+or check that your parameters are set correctly."
 #define ERROR_CHANNEL_NOT_SUPPORTED \
 "ERROR: This chip does not support the channel specified. \n \
 Either you mistyped the channel number or the chip number."
@@ -48,6 +52,11 @@ Either you mistyped the channel number or the chip number."
 #define ERROR_COIL_NOT_DETECTED \ 
 "ERROR: The coil is not detected. \n \
 Try checking all connections."
+
+#define WARNING_CHANNEL_ALREADY_CONFIGURED \
+"WARNING: This channel was previously configured \n \
+Did you mean to configure another channel? \n \
+The channel has been overwritten with the new parameters."
 
 struct RpTable {
   float kohms;
@@ -71,7 +80,7 @@ private:
     bool _set_channel_in_use(uint8_t);
 
     bool _set_reference_divider(uint8_t);
-    void _set_settle_count(uint8_t);
+    bool _set_settle_count(uint8_t);
     void _set_conversion_time(uint8_t);
     bool _set_driver_current(uint8_t);
     void _MUX_and_deglitch_config(uint8_t);

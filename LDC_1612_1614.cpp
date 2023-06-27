@@ -30,12 +30,18 @@ int8_t LDC::configure_channel(uint8_t channel, float inductance, float capacitan
     _capacitance[channel] = capacitance; // in pF
     _Rp[channel] = Rp; // in kohms
     _q_factor[channel] = _Rp[channel] * (_capacitance[channel] / _inductance[channel]);
-    _set_channel_in_use(channel);
+    if (_set_channel_in_use(channel)) {
+        Serial.println(ERROR_CHANNEL_NOT_SUPPORTED);
+        return -1;
+    }
     if (_set_reference_divider(channel)) {
         Serial.println(ERROR_FREQUENCY_TOO_LARGE);
         return -1;
     }
-    _set_settle_count(channel);
+    if (_set_settle_count(channel)) {
+        Serial.println(ERROR_SETTLE_TOO_LARGE);
+        return -1;
+    }
     _set_conversion_time(channel);
     if (_set_driver_current(channel)) {
         Serial.println(ERROR_RP_TOO_LARGE);
@@ -47,9 +53,11 @@ int8_t LDC::configure_channel(uint8_t channel, float inductance, float capacitan
 }
 
 bool LDC::_set_channel_in_use(uint8_t channel) {
-    if (channel > _num_channels) {
-        Serial.println(ERROR_CHANNEL_NOT_SUPPORTED);
-        return -1;
+    if (channel > _num_channels - 1) {
+        return 1;
+    }
+    if (_channels_in_use & (1 << channel) == 1) {
+        Serial.println(WARNING_CHANNEL_ALREADY_CONFIGURED);
     }
     _channels_in_use |= (1 << channel);
     return 0;
@@ -118,7 +126,6 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     // to change it to ^-6 and ^-3
     _f_sensor[channel] = 1 / (2 * 3.14 * sqrt(_inductance[channel] * _capacitance[channel]) * pow(10, -3) * pow(10, -6));
     if (_f_sensor[channel] > 33000000) {
-        Serial.println(ERROR_FREQUENCY_TOO_LARGE);
         return -1;
     }
     if (_f_sensor[channel] > 8750000) {
@@ -142,9 +149,12 @@ bool LDC::_set_reference_divider(uint8_t channel) {
 // Settle Time (tS1)= (SETTLECOUNT1ˣ16) / ƒREF1
 // the datasheet recommends a minimum of 10
 // and adding a slight buffer to the calculation, here +4 was chosen
-void LDC::_set_settle_count(uint8_t channel) {
+bool LDC::_set_settle_count(uint8_t channel) {
     uint16_t value = 10;
-    uint16_t settleTime = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
+    uint32_t settleTime = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
+    if (settleTime > 0xFFFF) {
+        return 1;
+    }
     if (settleTime > value) {
         value = settleTime;
     }
@@ -153,6 +163,7 @@ void LDC::_set_settle_count(uint8_t channel) {
     Serial.println(value, HEX);
     uint16_t test = LDC::I2C_read_16bit(SET_LC_STABILIZE_REG_START + channel);
     Serial.println(test, HEX);
+    return 0;
 }
 
 // conversion time is set to the highest value, 0xFFFF
