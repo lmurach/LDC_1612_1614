@@ -28,6 +28,7 @@
 #define CHANNEL_3  3  // LDC1614 only
 
 #define EXTERNAL_FREQUENCY 40000000
+#define MAX_SENSING_FREQ   10000000
 #define RP_TABLE_ELEMENTS  31
 #define _I2C_ADDR          0x2B
 
