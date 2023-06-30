@@ -15,7 +15,7 @@ In order to use the installed library, put the following code up top. Change the
 #include "LDC_1612_1614.h"
 LDC_1612_1614 ldc(LDC1612);
 ```
-Then write ldc. before each function. Function names and purposes can be found at the [bottom of this page](/Code). See examples for more clarity.
+Then write ldc. before each function. Function names and purposes can be found at the [bottom of this page](https://github.com/Quillington/LDC_1612_1614/blob/master/README.md#code-functions). See examples for more clarity.
 
 ## Setup
 
@@ -60,7 +60,7 @@ The chip has limitations on what it can measure. The frequency and Rp must be wi
 
 Note that changing either of these two values requires redoing both of the measurements.
 
-## Code
+## Code Functions
 ```c
 configure_channel(uint8_t channel, float inductance, float capacitance, float Rp);
 ```
