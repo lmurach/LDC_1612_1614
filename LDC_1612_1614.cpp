@@ -1,17 +1,13 @@
 #include "LDC_1612_1614.h"
 
-struct RpTable _Rp_lookup_table[] = {
-    {90.0, 16}, {77.6, 18}, {66.9, 20},
-    {57.6, 23}, {49.7, 28}, {42.8, 32},
-    {36.9, 40}, {31.8, 46}, {27.4, 52},
-    {23.6, 59}, {20.4, 72}, {17.6, 82},
-    {15.1, 95}, {13.0, 110}, {11.2, 127},
-    {9.69, 146}, {8.35, 169}, {7.20, 195},
-    {6.21, 212}, {5.35, 244}, {4.61, 297},
-    {3.97, 342}, {3.42, 424}, {2.95, 489},
-    {2.54, 551}, {2.19, 635}, {1.89, 763},
-    {1.63, 880}, {1.40, 1017}, {1.21, 1173},
-    {1.05, 1355}, {0.90, 1563}
+float _Rp_lookup_table[] = {
+    90.0, 77.6, 66.9, 57.6, 49.7, 
+    42.8, 36.9, 31.8, 27.4, 23.6, 
+    20.4, 17.6, 15.1, 13.0, 11.2, 
+    9.69, 8.35, 7.20, 6.21, 5.35, 
+    4.61, 3.97, 3.42, 2.95, 2.54, 
+    2.19, 1.89, 1.63, 1.40, 1.21, 
+    1.05, 0.90
 };
 
 LDC::LDC(uint8_t num_channels) {
@@ -191,11 +187,11 @@ void LDC::_set_conversion_time(uint8_t channel) {
 // the rest are reserved to be 0
 bool LDC::_set_driver_current(uint8_t channel) {
     uint16_t value;
-    if (_Rp[channel] > _Rp_lookup_table[0].kohms) {
+    if (_Rp[channel] > _Rp_lookup_table[0]) {
         return -1;
     }
     for (int i = 0; i < RP_TABLE_ELEMENTS; i++) {
-        if (_Rp[channel] <= _Rp_lookup_table[i].kohms) {
+        if (_Rp[channel] <= _Rp_lookup_table[i]) {
             value = i;
         }
     }

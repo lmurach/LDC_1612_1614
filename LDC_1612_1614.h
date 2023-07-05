@@ -43,7 +43,7 @@ Try to decrease the size of the parallel capacitor."
 "ERROR: Rp is too large! \n \
 Try to add a 100 ohm resistor in parallel with the inductor."
 #define ERROR_SETTLE_TOO_LARGE \
-"ERROR Q is too large compared to the size of the coil. \n \
+"ERROR Q is too large compared to the size of the coil! \n \
 Try to reduce the size of the capacitor, \n \
 or check that your parameters are set correctly."
 #define ERROR_CHANNEL_NOT_SUPPORTED \
@@ -55,18 +55,13 @@ Either you mistyped the channel number or the chip number."
 // #define ERROR_WATCHDOG_TIMEOUT       -5
 // #define ERROR_CONVERSION_AMPLITUDE   -6
 #define ERROR_COIL_NOT_DETECTED \ 
-"ERROR: The coil is not detected. \n \
+"ERROR: The coil is not detected! \n \
 Try checking all connections."
 
 #define WARNING_CHANNEL_ALREADY_CONFIGURED \
-"WARNING: This channel was previously configured \n \
+"WARNING: This channel was previously configured. \n \
 Did you mean to configure another channel? \n \
-The channel has been overwritten with the new parameters."
-
-struct RpTable {
-  float kohms;
-  uint16_t current;
-};  
+Your new parameters have been set." 
 
 class LDC {
 private:
