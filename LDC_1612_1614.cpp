@@ -13,6 +13,8 @@ float _Rp_lookup_table[] = {
 LDC::LDC(uint8_t num_channels) {
     _num_channels = num_channels;
     _channels_in_use = 0;
+    _external_frequency = EXTERNAL;
+    _I2C_address = 0x2B;
 }
 
 // void LDC::print_num_channels() {
@@ -58,7 +60,6 @@ bool LDC::_set_channel_in_use(uint8_t channel) {
     return 0;
 }
 
-// TODO: NEED TO CHECK FOR ERRORS
 uint32_t LDC::get_channel_data(uint8_t channel) {
     uint32_t MSB = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2);
     uint32_t LSB = LDC::I2C_read_16bit(CONVERTION_RESULT_REG_START + channel * 2 + 1);
@@ -71,6 +72,10 @@ uint32_t LDC::get_channel_data(uint8_t channel) {
         Serial.println(ERROR_COIL_NOT_DETECTED);
     }
     return data; 
+}
+
+void LDC::delay_exact_time(uint8_t channel) {
+    delay(conversion_time[channel]);
 }
 
 // int8_t LDC::_check_read_errors(uint8_t error_byte) {
@@ -134,9 +139,9 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     else {
         value = 0x1000;
     }
-    divider = EXTERNAL_FREQUENCY / (_f_sensor[channel] * 4);
+    divider = _external_frequency / (_f_sensor[channel] * 4);
     value |= divider;
-    _ref_frequency[channel] = EXTERNAL_FREQUENCY / divider; // the Grove board has an external occilator at 40MHz
+    _ref_frequency[channel] = _external_frequency / divider; // the Grove board has an external occilator at 40MHz
     LDC::I2C_write_16bit(SET_FREQ_REG_START + channel, value);
     Serial.println("Reference Divider");
     Serial.println(value, HEX);
@@ -151,13 +156,14 @@ bool LDC::_set_reference_divider(uint8_t channel) {
 // and adding a slight buffer to the calculation, here +4 was chosen
 bool LDC::_set_settle_count(uint8_t channel) {
     uint16_t value = 10;
-    uint32_t settleTime = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
-    if (settleTime > 0xFFFF) {
+    uint32_t settle_count = ((_q_factor[channel] * _ref_frequency[channel]) / (16 * _f_sensor[channel])) + 4;
+    if (settle_count > 0xFFFF) {
         return 1;
     }
-    if (settleTime > value) {
-        value = settleTime;
+    if (settle_count > value) {
+        value = settle_count;
     }
+    settle_time[channel] = ((settle_count * 16) / _ref_frequency[channel]) * 1000;
     LDC::I2C_write_16bit(SET_LC_STABILIZE_REG_START + channel, value);
     Serial.println("Stabilize Time");
     Serial.println(value, HEX);
@@ -280,7 +286,7 @@ void LDC::_LDC_config(uint8_t channel) {
 }
 
 int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
-    Wire.beginTransmission(_I2C_ADDR);
+    Wire.beginTransmission(_I2C_address);
     Wire.write(reg);
 
     Wire.write((uint8_t)(value >> 8));
@@ -291,15 +297,37 @@ int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
 uint16_t LDC::I2C_read_16bit(uint8_t start_reg) {
     uint16_t result = 0;
     uint8_t byte = 0;
-    Wire.beginTransmission(_I2C_ADDR);
+    Wire.beginTransmission(_I2C_address);
     Wire.write(start_reg);
     Wire.endTransmission(false);
 
-    Wire.requestFrom(_I2C_ADDR, sizeof(uint16_t));
+    Wire.requestFrom(_I2C_address, sizeof(uint16_t));
     while (sizeof(uint16_t) != Wire.available());
     byte = Wire.read();
     result = (uint16_t)byte << 8;
     byte = Wire.read();
     result |= byte;
     return result;
+}
+
+// 1 for 0x2B (high voltage on ADDR pin)
+// 0 for 0x2A (low voltage on ADDR pin)
+void change_I2C_address(bool mode) {
+    if (mode) {
+        _I2C_address = 0x2B;
+    }
+    else {
+        _I2C_address = 0x2A;
+    }
+}
+
+// use INTERNAL or EXTERNAL for standard freqencies
+// or input the oscillator value used in your design
+// must be <40MHz and >2MHz
+void change_clock_freq(uint32_t freq) {
+    if (freq > 40000000 || freq < 2000000) {
+        Serial.println(ERROR_REF_FREQUENCY_OOB);
+        return;
+    }
+    _external_frequency = freq;
 }

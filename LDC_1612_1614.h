@@ -27,11 +27,12 @@
 #define CHANNEL_2  2  // LDC1614 only
 #define CHANNEL_3  3  // LDC1614 only
 
-#define EXTERNAL_FREQUENCY 40000000
 #define MAX_SENSING_FREQ   10000000
 #define MIN_SENSING_FREQ   1000
 #define RP_TABLE_ELEMENTS  31
-#define _I2C_ADDR          0x2B
+
+#define INTERNAL 43000000
+#define EXTERNAL 40000000
 
 #define ERROR_FREQUENCY_TOO_LARGE \
 "ERROR: Sensor frequency is too large! \n  \
@@ -63,19 +64,26 @@ Try checking all connections."
 Did you mean to configure another channel? \n \
 Your new parameters have been set." 
 
+#define ERROR_REF_FREQUENCY_OOB \ 
+"ERROR: The reference frequency you inputted is out of bounds. \n \
+Only values <40Mhz and >2MHz are allowed."
+
 class LDC {
 private:
 // knowing which channels are in use affects the MUX config
 // and allows for faster conversions
 // as it doesn't need to cycle through all the channels
+    uint32_t _external_frequency;
+    uint8_t _I2C_address;
     uint8_t _num_channels;
     uint8_t _channels_in_use;
-    float _Rp[2];
-    float _inductance[2];
-    float _capacitance[2];
-    float _q_factor[2];
-    uint32_t _f_sensor[2];
-    uint32_t _ref_frequency[2];
+    float _Rp[4];
+    float _inductance[4];
+    float _capacitance[4];
+    float _q_factor[4];
+    uint32_t _f_sensor[4];
+    uint32_t _ref_frequency[4];
+    uint16_t _settle_time[4];
 
     bool _set_channel_in_use(uint8_t);
 
@@ -95,7 +103,10 @@ public:
     LDC(uint8_t);
     int8_t configure_channel(uint8_t, float, float, float);
     uint32_t get_channel_data(uint8_t);
-    void print_num_channels();
+
+    void delay_exact_time();
+    void change_I2C_address(bool);
+    void change_clock_freq(uint32_t);
 };
 
 #endif
