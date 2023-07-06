@@ -233,13 +233,13 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
         value |= 0x4000; // channel 3 in use
     }
     // handling input deglitch
-    if (_f_sensor < 1000000) {
+    if (_f_sensor[channel] < 1000000) {
         value |= 0b001;
     }
-    else if (_f_sensor < 3300000) {
+    else if (_f_sensor[channel] < 3300000) {
         value |= 0b100;
     }
-    else if (_f_sensor < 10000000) {
+    else if (_f_sensor[channel] < 10000000) {
         value |= 0b101;
     }
     else {
