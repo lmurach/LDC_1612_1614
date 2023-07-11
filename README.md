@@ -45,12 +45,13 @@ Make sure that you have a function generator, variable resistor/potentiometer (o
 <ol start=2>
   <li>Hold metal near your coil at the maximum distance you desire to measure metal.</li>
   <li>Change the frequency of the scope until the input and output channel match phase. The output's amplitude should peak at this point. This is the resonant frequency. Pictured below: Not in resonance (left) and in resonance (right).</li>
-<p align="center"><img src="https://github.com/Quillington/LDC_1612_1614/assets/66843400/8a34925a-9ecc-40f7-8a53-7a0f95d5843e" alt="not in resonance" width="400"/><img src="https://github.com/Quillington/LDC_1612_1614/assets/66843400/67159a9f-991d-4831-9e32-ea89a89eae91" alt="in resonance" width="400"/></p>
+<p align="center"><img src="https://github.com/Quillington/LDC_1612_1614/assets/66843400/e121e335-8de2-4e28-9a8f-e45824461ef7" alt="not in resonance" width="400"/><img src="https://github.com/Quillington/LDC_1612_1614/assets/66843400/38304862-21b9-4bf9-96b7-ec1ce0a1d0a9" alt="in resonance" width="400"/></p>
 
 <ol start=4 type="1">
   <li>At this point the inductance can be calculated with resonant frequency. Use the equation L = (C/(2πf)^2) or <a href="https://www.omnicalculator.com/physics/resonant-frequency-lc">this calculator</a>. With the values of C=100pf and f= 3.68MHz, the calculated value for L is 18.7, which is very close to the expected L of 18.1.</li>
-  <li>Now, adjust the resistor so that the output is 4x smaller than the input. 2x can also be used for less current consumption, but 4x is the recommeneded amount.</li>
+  <li>Now, adjust the resistor so that the output is 4x smaller than the input. 2x can also be used for less current consumption, but 4x is the recommeneded amount. Below 2x was used, notice the scale on the scope.</li>
 </ol>
+<p align="center"><img src="https://github.com/Quillington/LDC_1612_1614/assets/66843400/61863758-19d9-4088-ae8f-547724730de4" width="600" alt="adjested R"/></p>
 
 ### Making sure the Parameters are in the Measurable Range
 
