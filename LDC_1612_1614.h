@@ -104,9 +104,9 @@ public:
     int8_t configure_channel(uint8_t, float, float, float);
     uint32_t get_channel_data(uint8_t);
 
-    void delay_exact_time();
-    void change_I2C_address(bool);
+    void delay_exact_time(uint8_t);
     void change_clock_freq(uint32_t);
+    void change_I2C_address(bool);
 };
 
 #endif

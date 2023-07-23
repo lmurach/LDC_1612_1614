@@ -75,7 +75,7 @@ uint32_t LDC::get_channel_data(uint8_t channel) {
 }
 
 void LDC::delay_exact_time(uint8_t channel) {
-    delay(conversion_time[channel]);
+    delay(_settle_time[channel]);
 }
 
 // int8_t LDC::_check_read_errors(uint8_t error_byte) {
@@ -163,7 +163,7 @@ bool LDC::_set_settle_count(uint8_t channel) {
     if (settle_count > value) {
         value = settle_count;
     }
-    settle_time[channel] = ((settle_count * 16) / _ref_frequency[channel]) * 1000;
+    _settle_time[channel] = ((settle_count * 16) / _ref_frequency[channel]) * 1000;
     LDC::I2C_write_16bit(SET_LC_STABILIZE_REG_START + channel, value);
     Serial.println("Stabilize Time");
     Serial.println(value, HEX);
@@ -312,7 +312,7 @@ uint16_t LDC::I2C_read_16bit(uint8_t start_reg) {
 
 // 1 for 0x2B (high voltage on ADDR pin)
 // 0 for 0x2A (low voltage on ADDR pin)
-void change_I2C_address(bool mode) {
+void LDC::change_I2C_address(bool mode) {
     if (mode) {
         _I2C_address = 0x2B;
     }
@@ -324,7 +324,7 @@ void change_I2C_address(bool mode) {
 // use INTERNAL or EXTERNAL for standard freqencies
 // or input the oscillator value used in your design
 // must be <40MHz and >2MHz
-void change_clock_freq(uint32_t freq) {
+void LDC::change_clock_freq(uint32_t freq) {
     if (freq > 40000000 || freq < 2000000) {
         Serial.println(ERROR_REF_FREQUENCY_OOB);
         return;
