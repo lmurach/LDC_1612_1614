@@ -143,10 +143,6 @@ bool LDC::_set_reference_divider(uint8_t channel) {
     value |= divider;
     _ref_frequency[channel] = _external_frequency / divider; // the Grove board has an external occilator at 40MHz
     LDC::I2C_write_16bit(SET_FREQ_REG_START + channel, value);
-    Serial.println("Reference Divider");
-    Serial.println(value, HEX);
-    uint16_t test = LDC::I2C_read_16bit(SET_FREQ_REG_START + channel);
-    Serial.println(test, HEX);
     return 0;
 }
 
@@ -165,10 +161,6 @@ bool LDC::_set_settle_count(uint8_t channel) {
     }
     _settle_time[channel] = ((settle_count * 16) / _ref_frequency[channel]) * 1000;
     LDC::I2C_write_16bit(SET_LC_STABILIZE_REG_START + channel, value);
-    Serial.println("Stabilize Time");
-    Serial.println(value, HEX);
-    uint16_t test = LDC::I2C_read_16bit(SET_LC_STABILIZE_REG_START + channel);
-    Serial.println(test, HEX);
     return 0;
 }
 
@@ -178,10 +170,6 @@ bool LDC::_set_settle_count(uint8_t channel) {
 // TODO: ADD A FAST MODE THAT CONVERTS AS FAST AS ALLOWED
 void LDC::_set_conversion_time(uint8_t channel) {
     LDC::I2C_write_16bit(SET_CONVERSION_TIME_REG_START + channel, 0xFFFF);
-    Serial.println("Conversion Time");
-    Serial.println(0xFFFF, HEX);
-    uint16_t test = LDC::I2C_read_16bit(SET_CONVERSION_TIME_REG_START + channel);
-    Serial.println(test, HEX);
 }
 
 // The original library does not take into account the fact that the Rp
@@ -203,10 +191,6 @@ bool LDC::_set_driver_current(uint8_t channel) {
     }
     value = value << 11;
     LDC::I2C_write_16bit(SET_DRIVER_CURRENT_REG + channel, value);
-    Serial.println("Driver Current");
-    Serial.println(value, HEX);
-    uint16_t test = LDC::I2C_read_16bit(SET_DRIVER_CURRENT_REG + channel);
-    Serial.println(test, HEX);
     return 0;
 }
 
@@ -246,11 +230,6 @@ void LDC::_MUX_and_deglitch_config(uint8_t channel) {
         value |= 0b111;
     }
     LDC::I2C_write_16bit(MUL_CONFIG_REG, value);
-    Serial.println("MUX");
-    Serial.println(value, HEX);
-    uint16_t test = LDC::I2C_read_16bit(MUL_CONFIG_REG);
-    Serial.println(test, HEX);
-    return 0;
 }
 
 // all of this is the default but some critical changes need to made
@@ -279,10 +258,6 @@ void LDC::_LDC_config(uint8_t channel) {
     }
     value |= 0x1601;
     LDC::I2C_write_16bit(SENSOR_CONFIG_REG, value);
-    Serial.println("LDC Config");
-    Serial.println(value, HEX);
-    uint16_t test = LDC::I2C_read_16bit(SENSOR_CONFIG_REG);
-    Serial.println(test, HEX);
 }
 
 int32_t LDC::I2C_write_16bit(uint8_t reg, uint16_t value) {
